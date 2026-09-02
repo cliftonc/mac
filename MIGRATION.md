@@ -90,9 +90,25 @@ Installed: `@mastra/core` **1.37.1**, `@mastra/libsql` 1.11.1, `@mastra/loggers`
 - **Storage:** `new LibSQLStore({ id, url })` from `@mastra/libsql`. **`id` is required.**
 - **Logger:** `PinoLogger` from `@mastra/loggers`.
 
-### Peer-dep note
+### Peer-dep notes
 `@mastra/core` pulls AI-SDK utils that peer-depend on `zod@^3`, but we use `zod@4`. Install
 warns; build/typecheck/runtime pass so far. Revisit if zod-schema tools misbehave.
+
+`@hono/node-ws@1.3.1` peer-depends on `@hono/node-server@^1.19.11`, but we run the adapter
+at v2, so install warns `✕ unmet peer @hono/node-server@^1.19.11: found 2.x`. node-ws has no
+2.x-compatible release. It arrives via two paths, and only one of them pairs it with v2:
+
+- `@mastra/hono` (a runtime dep) → node-ws, inside its `setupBrowserStream()` helper. This
+  is the pairing the warning is about. Nothing here calls `setupBrowserStream`, and the
+  range is conservative anyway — node-ws imports `hono/ws`, `ws` and `node:http` only, and
+  couples to the adapter solely through the `http.Server` that `serve()` returns, which v2
+  still returns. `apps/server/test/hono-node-server.test.ts` runs a real handshake over the
+  combination, so this is checked rather than assumed.
+- `mastra` (a devDep, for `mastra studio`) → `@mastra/deployer` → node-ws. Not affected:
+  `@mastra/deployer` bundles its own copy of node-server 1.19.14 inline, so node-ws is
+  handed a v1 server there regardless of what we resolve.
+
+Revisit if node-ws ships a 2.x peer range.
 
 ## Gotchas hit (and fixes)
 

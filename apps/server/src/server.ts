@@ -7,6 +7,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { MastraServer, type HonoBindings, type HonoVariables } from "@mastra/hono";
+import { corsOptions } from "./cors.js";
 import { mastra, macRuntime } from "./mastra/index.js";
 
 /**
@@ -31,28 +32,11 @@ import { mastra, macRuntime } from "./mastra/index.js";
  */
 const app = new Hono<{ Bindings: HonoBindings; Variables: HonoVariables }>();
 
-// CORS — the `@mastra/hono` adapter applies NONE (verified: zero access-control
-// handling in its dist), unlike the `mastra dev` server. Studio's browser SPA
-// (:3000) calls this API at :4111 cross-origin, so we must supply it.
-//
-// CRITICAL: Studio sends its fetches with `credentials: 'include'`. Per the CORS
-// spec a credentialed request CANNOT use a wildcard `Access-Control-Allow-Origin`
-// — the browser blocks the *response* even though the preflight passes (hence the
-// symptom: "preflight 204, actual fetch CORS error"). So we ECHO the caller's
-// origin (not `*`) AND send `Access-Control-Allow-Credentials: true`. `origin` as
-// a function makes Hono reflect the request origin (+ `Vary: Origin`); the
-// `|| "*"` only covers no-Origin callers (curl/same-origin), where creds don't
-// apply. Registered BEFORE init() so it also wraps the Mastra /api/* routes.
-app.use(
-  "*",
-  cors({
-    origin: (origin) => origin || "*",
-    credentials: true,
-    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "x-mastra-client-type", "x-mastra-dev-playground"],
-    exposeHeaders: ["Content-Length", "X-Requested-With"],
-  }),
-);
+// CORS — the options live in `./cors.ts` (with the reasoning for echoing the
+// caller's origin instead of `*`) so `test/hono-node-server.test.ts` can assert
+// against the real configuration. Registered BEFORE init() so it also wraps the
+// Mastra /api/* routes.
+app.use("*", cors(corsOptions));
 
 const server = new MastraServer({ app, mastra });
 await server.init();

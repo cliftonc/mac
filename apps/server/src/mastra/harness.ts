@@ -1,5 +1,5 @@
 import { Harness } from "@mastra/core/harness";
-import type { HarnessMessage } from "@mastra/core/harness";
+import type { MastraDBMessage } from "@mastra/core/harness";
 import { createTool } from "@mastra/core/tools";
 import type { Agent } from "@mastra/core/agent";
 import type { Workflow } from "@mastra/core/workflows";
@@ -124,11 +124,11 @@ export function createMacHarness(deps: MacHarnessDeps): Harness {
   });
 }
 
-/** Concatenate the text blocks of an assistant message. */
-function assistantText(message: HarnessMessage): string {
+/** Concatenate the text parts of an assistant message. */
+function assistantText(message: MastraDBMessage): string {
   let out = "";
-  for (const block of message.content) {
-    if (block.type === "text") out += block.text;
+  for (const part of message.content.parts) {
+    if (part.type === "text") out += part.text;
   }
   return out.trim();
 }
@@ -137,11 +137,16 @@ function assistantText(message: HarnessMessage): string {
  * Adapt a {@link Harness} to the platform-neutral `InteractiveDispatch` the host
  * expects, so `@nearform/mac` never imports the harness. One external
  * conversation id (Slack thread / GitHub issue / CLI session) maps to one
- * Harness thread; the assistant reply is accumulated from `message_end` events
- * (sendMessage itself returns void) and sent back via `turn.reply`.
+ * Harness SESSION (keyed by `resourceId`); the assistant reply is accumulated
+ * from `message_end` events (sendMessage itself returns void) and sent back via
+ * `turn.reply`.
+ *
+ * Sessions replaced the harness-level thread juggling in `@mastra/core` 1.51+:
+ * `createSession({ resourceId })` resolves to the same session for the same
+ * resource, and each session owns its thread binding, run loop and state — so
+ * concurrent conversations no longer share one current thread.
  */
 export function createInteractiveDispatch(harness: Harness): InteractiveDispatch {
-  const threads = new Map<string, string>();
   let initialized = false;
 
   const ensureInit = async (): Promise<void> => {
@@ -150,38 +155,27 @@ export function createInteractiveDispatch(harness: Harness): InteractiveDispatch
     initialized = true;
   };
 
-  // TODO(harness): one harness thread per external conversation id. This in-memory
-  // map is lost on restart and has no cross-process locking — revisit for
-  // multi-instance deploys (Harness exposes thread/lock primitives).
-  const ensureThread = async (externalId: string): Promise<void> => {
-    await ensureInit();
-    const existing = threads.get(externalId);
-    if (existing) {
-      await harness.switchThread({ threadId: existing });
-      return;
-    }
-    const thread = await harness.createThread({ title: externalId });
-    threads.set(externalId, thread.id);
-  };
-
   return {
     async handle(turn): Promise<void> {
+      await ensureInit();
+      // Same external conversation id → same session (and therefore same thread).
+      const session = await harness.createSession({ resourceId: turn.threadId });
+
       let text = "";
-      const unsubscribe = harness.subscribe((event) => {
+      const unsubscribe = session.subscribe((event) => {
         if (event.type === "message_end" && event.message.role === "assistant") {
           text = assistantText(event.message);
         }
         // TODO(harness): real approval transport (e.g. Slack interactive buttons).
         // Interim: auto-approve so a single interactive turn can complete.
         if (event.type === "tool_approval_required") {
-          harness.respondToToolApproval({ decision: "approve" });
+          void session.respondToToolApproval({ decision: "approve" });
         }
         // TODO(harness): wire plan-approval response transport
         // (respondToPlanApproval) to the originating surface.
       });
       try {
-        await ensureThread(turn.threadId);
-        await harness.sendMessage({ content: turn.message });
+        await session.sendMessage({ content: turn.message });
       } finally {
         unsubscribe();
       }

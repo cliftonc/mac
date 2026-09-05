@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mastra/core": "^1.41.0",
+    "@mastra/core": "^1.64.0",
     "@nearform/mac": "workspace:*",
     "@nearform/mac-github": "workspace:*",
     "@nearform/mac-slack": "workspace:*",

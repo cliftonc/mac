@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mastra/core": "^1.41.0",
+    "@mastra/core": "^1.64.0",
     "@nearform/mac": "workspace:*",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.16.0"

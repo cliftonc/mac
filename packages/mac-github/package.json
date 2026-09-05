@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mastra/core": "^1.41.0",
+    "@mastra/core": "^1.64.0",
     "@nearform/mac": "workspace:*",
     "@octokit/auth-app": "^7.1.0",
     "octokit": "^5.0.5",

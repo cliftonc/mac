@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.14",
-    "@mastra/core": "^1.41.0",
-    "@mastra/duckdb": "^1.4.1",
-    "@mastra/hono": "^1.4.24",
-    "@mastra/libsql": "^1.12.1",
-    "@mastra/loggers": "^1.1.2",
-    "@mastra/memory": "^1.20.2",
-    "@mastra/observability": "^1.14.1",
+    "@mastra/core": "^1.64.0",
+    "@mastra/duckdb": "^1.6.4",
+    "@mastra/hono": "^1.7.6",
+    "@mastra/libsql": "^1.22.3",
+    "@mastra/loggers": "^1.3.1",
+    "@mastra/memory": "^1.28.2",
+    "@mastra/observability": "^1.17.5",
     "@nearform/mac": "workspace:*",
     "@nearform/mac-agent-workflows": "workspace:*",
     "@nearform/mac-github": "workspace:*",
@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "mastra": "^1.12.2",
+    "mastra": "^1.27.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.0"
   }
